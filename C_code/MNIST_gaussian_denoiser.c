@@ -40,7 +40,7 @@ int main()
   double alpha;
   double beta;
   double noise_var = 0.01;
-  double rank_tol = 1e-10;
+  double rank_tol = 1e-12;
 
   double ** mnist_double_matrix = dmatrix(0, m-1, 0, n-1);
 
@@ -140,7 +140,7 @@ int main()
 
     int breg_max = 4;
     int max_it = 1000;
-    double eta = 0.75;
+    double eta = 0.20;
     double mu_low = 1e-2;
     double gtol = 1e-8;
     double xtol = 1e-10;
@@ -186,16 +186,16 @@ int main()
           }
           cond = gsl_blas_dnrm2(Xvec) / cond;
         }
-        rank = 0;
-        for ( i = 0; i < n; i++)
-        {
-          if (gsl_vector_get(Sk, i) > rank_tol)
-          {
-            rank++;
-          }
-
-        }
-        printf("breg_it = %d , mu_it = %d, mu = %f, it_final = %d, cond = %f, convergent rank: %d \n", breg_it, mu_count, mu, it, cond, rank);
+        // rank = 0;
+        // for ( i = 0; i < n; i++)
+        // {
+        //   if (gsl_vector_get(Sk, i) > rank_tol)
+        //   {
+        //     rank++;
+        //   }
+        //
+        // }
+        // printf("breg_it = %d , mu_it = %d, mu = %f, it_final = %d, cond = %f, convergent rank: %d \n", breg_it, mu_count, mu, it, cond, rank);
 
         mu = mu*eta;
         gsl_matrix_memcpy(Xk_work, Xk);
@@ -205,10 +205,21 @@ int main()
         // memset(mnist_filename, 0, 49);
         // snprintf(mnist_filename, 49, "./MNIST_interim/MNIST%d_CRR_%d_%d.csv", file_it, breg_it, mu_count);
 
-        // write_csv_matrix(mnist_filename, mnist_double_matrix, m, n);
+        write_csv_matrix(mnist_filename, mnist_double_matrix, m, n);
 
       }
       // fprintf(interim_spec, "%d\n", mu_count);
+
+      rank = 0;
+      for ( i = 0; i < n; i++)
+      {
+        if (gsl_vector_get(Sk, i) > rank_tol)
+        {
+          rank++;
+        }
+
+      }
+      printf("file num: %d, breg_it = %d , convergent rank: %d \n", file_it, breg_it, rank);
 
       GSL_mat2vec(Xk, Xvec);
       alpha = 1;
