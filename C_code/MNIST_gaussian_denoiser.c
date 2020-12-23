@@ -33,14 +33,9 @@ int main()
   int max_it = 500;
   int mnist_max = 1;
 
-  double A_var, mu_high, mu, nu, cond, tau_max, p_d, A_S1;
+  double A_std, mu_high, mu, nu, cond, tau, tau_max, p_d, A_S1;
   double m_d = m;
   double n_d = n;
-  double tau = 1;
-  double eta = 0.25;
-  double mu_low = 1e-8;
-  double gtol = 1e-8;
-  double xtol = 1e-10;
   double S00_1;
   double alpha;
   double beta;
@@ -104,7 +99,7 @@ int main()
     printf("MNIST%d native rank: %d out of %d \n", file_it,rank, n);
     p = 3*rank*(m + n - rank);
     p_d = p;
-    A_var = 1/((double)p);
+    A_std = sqrt(1/(p_d));
 
     gsl_matrix * A = gsl_matrix_alloc(p, m*n);
     gsl_matrix * A_U = gsl_matrix_alloc(p, m*n);
@@ -116,27 +111,20 @@ int main()
     gsl_vector * b_k = gsl_vector_alloc(p);
     gsl_vector * b_work = gsl_vector_alloc(p);
 
-
     for ( i = 0; i < p; i++)
     {
       for ( j = 0; j < m*n; j++)
       {
-        gsl_matrix_set(A, i, j, gsl_ran_gaussian(T1, A_var));
+        gsl_matrix_set(A, i, j, gsl_ran_gaussian(T1, A_std));
       }
     }
 
-    gsl_matrix_memcpy(A_U, A);
-    ret_int = gsl_linalg_SV_decomp(A_U, A_V, A_s, A_work);
-    A_S1 = gsl_vector_get(A_s, 0);
-    tau_max = 2 / (A_S1*A_S1);
-    printf("true max singular value: %f \n", A_S1);
-    printf("el karoui: %f \n", (1 + sqrt(m_d*n_d/p_d) ) );
     tau_max = 2/((1 + sqrt(m_d*n_d/p_d) )* (1 + sqrt(m_d*n_d/p_d) ) );
     printf("tau_max %f\n", tau_max);
 
-    for ( j = 0; j < n; j++)
+    for ( j = 0; j < n; j++) // down columns
     {
-      for ( i = 0; i < m; i++)
+      for ( i = 0; i < m; i++) // down rows
       {
         gsl_vector_set(Xvec, j*(m) + i, gsl_matrix_get(X00, i, j)/S00_1 );
         gsl_matrix_set(X, i, j, gsl_matrix_get(X00, i, j)/S00_1);
@@ -148,23 +136,30 @@ int main()
     ret_int = gsl_blas_dgemv(CblasNoTrans, alpha, A, Xvec, beta, b);
     ret_int = gsl_blas_dgemv(CblasTrans, alpha, A, b, beta, Xvec_work);
     gsl_vector_memcpy(b_k, b);
+    gsl_matrix_set_zero(S_mat_work);
+
+    int breg_max = 4;
+    int max_it = 1000;
+    double eta = 0.75;
+    double mu_low = 1e-2;
+    double gtol = 1e-8;
+    double xtol = 1e-10;
+
     mu = eta*gsl_blas_dnrm2(Xvec_work);
 
-    gsl_matrix_set_zero(S_mat_work);
-    int breg_max = 4;
-    int max_it = 10;
-    FILE * out_file  = fopen("./MNIST_interim/interim_spec_file.dat", "w");
-
+    // FILE * interim_spec  = fopen("./MNIST_interim/interim_spec_file.dat", "w");
     for (int breg_it = 1; breg_it < breg_max; breg_it++)
     {
       mu_count = 0;
       gsl_matrix_set_zero(Xk);
-      while (mu > mu_low)
+
+      while (mu > mu_low) // fixed point continuation
       {
         mu_count++;
         cond = 1;
         it = 0;
-        while ((cond > xtol)&&(it < max_it))
+        nu = mu*tau;
+        while ((cond > xtol)&&(it < max_it)) // fixed point iteration
         {
           it++;
           gsl_matrix_memcpy(Xk_last, Xk);
@@ -172,17 +167,9 @@ int main()
           G_func_GSL(A, Xk, b_k, b_work, Xvec);
           GSL_vec2mat(Xk_work, Xvec);
 
-          // if (it != 0)
-          // {
-          //   tau = line_search_tau(A, Xk, b_k, Xvec, Xvec_work, Xvec_work2, b_work, tau_max);
-          //
-          // }
-          // else
-          // {
-            tau = 1;
-          // }
-
+          tau = line_search_tau(A, Xk, b_k, Xvec, Xvec_work, Xvec_work2, b_work, 2*tau_max);
           nu = tau*mu;
+
 
           gsl_matrix_scale(Xk_work, tau );
           gsl_matrix_sub(Xk, Xk_work);
@@ -199,19 +186,29 @@ int main()
           }
           cond = gsl_blas_dnrm2(Xvec) / cond;
         }
-        printf("breg_it = %d , it = %d, cond = %f \n", breg_it, it, cond);
+        rank = 0;
+        for ( i = 0; i < n; i++)
+        {
+          if (gsl_vector_get(Sk, i) > rank_tol)
+          {
+            rank++;
+          }
+
+        }
+        printf("breg_it = %d , mu_it = %d, mu = %f, it_final = %d, cond = %f, convergent rank: %d \n", breg_it, mu_count, mu, it, cond, rank);
 
         mu = mu*eta;
         gsl_matrix_memcpy(Xk_work, Xk);
         gsl_matrix_scale(Xk_work, (double) S00_1 );
         GSLmat_2_NRmat(mnist_double_matrix, 0, m-1, 0, n-1, Xk_work);
 
-        memset(mnist_filename, 0, 49);
-        snprintf(mnist_filename, 49, "./MNIST_interim/MNIST%d_CRR_%d_%d.csv", file_it, breg_it, mu_count);
+        // memset(mnist_filename, 0, 49);
+        // snprintf(mnist_filename, 49, "./MNIST_interim/MNIST%d_CRR_%d_%d.csv", file_it, breg_it, mu_count);
 
-        write_csv_matrix(mnist_filename, mnist_double_matrix, m, n);
+        // write_csv_matrix(mnist_filename, mnist_double_matrix, m, n);
 
       }
+      // fprintf(interim_spec, "%d\n", mu_count);
 
       GSL_mat2vec(Xk, Xvec);
       alpha = 1;
@@ -222,9 +219,7 @@ int main()
       ret_int = gsl_blas_dgemv(CblasTrans, alpha, A, b_k, beta, Xvec_work);
       mu = eta*gsl_blas_dnrm2(Xvec_work);
     }
-    fprintf(out_file, "%d", mu_count);
-    fclose(out_file);
-
+    // fclose(interim_spec);
     gsl_matrix_scale(Xk, (double) S00_1 );
     GSLmat_2_NRmat(mnist_double_matrix, 0, m-1, 0, n-1, Xk);
 
