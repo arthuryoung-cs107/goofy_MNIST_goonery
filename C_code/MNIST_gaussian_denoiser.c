@@ -33,7 +33,7 @@ int main()
   int max_it = 500;
   int mnist_max = 1;
 
-  double A_std, mu_high, mu, nu, cond, tau_max, p_d, A_S1;
+  double A_std, mu_high, mu, nu, cond, tau, tau_max, p_d, A_S1;
   double m_d = m;
   double n_d = n;
   double S00_1;
