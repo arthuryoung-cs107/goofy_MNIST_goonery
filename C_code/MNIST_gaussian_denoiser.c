@@ -24,14 +24,14 @@ int main()
     printf("Employing GSL matrix algebra packages\n");
   #endif
 
-  char mnist_filename[50];
+  char mnist_filename[100];
   char specfile[300];
 
   int i, j, ret_int, rank, p, it, mu_count;
   int m = 28;
   int n = 28;
   int max_it = 500;
-  int mnist_max = 1;
+  int mnist_max = 7000;
 
   double A_std, mu_high, mu, nu, cond, tau, tau_max, p_d, A_S1;
   double m_d = m;
@@ -74,11 +74,14 @@ int main()
 
   gsl_rng * T1 = gsl_rng_alloc(gsl_rng_taus);
 
-  for ( int file_it = 0; file_it < mnist_max; file_it++)
+  for ( int file_it = 111; file_it < mnist_max; file_it++)
   {
-    memset(mnist_filename, 0, 49);
-    snprintf(mnist_filename, 49, "../MNist_csv_raw/MNIST%d.csv", file_it);
+    memset(mnist_filename, 0, 99);
+    snprintf(mnist_filename, 99, "../MNist_csv_raw/MNIST%d.csv", file_it);
+    gsl_matrix_memcpy(U00, X00);
+
     read_csv_matrix(mnist_filename, mnist_double_matrix, m, n);
+
     NRmat_2_GSLmat(mnist_double_matrix, 0, m-1, 0, n-1, X00);
 
     gsl_matrix_memcpy(U00, X00);
@@ -102,11 +105,6 @@ int main()
     A_std = sqrt(1/(p_d));
 
     gsl_matrix * A = gsl_matrix_alloc(p, m*n);
-    gsl_matrix * A_U = gsl_matrix_alloc(p, m*n);
-    gsl_vector * A_s = gsl_vector_alloc(m*n);
-    gsl_matrix * A_V = gsl_matrix_alloc(m*n, m*n);
-    gsl_vector * A_work = gsl_vector_alloc(m*n);
-
     gsl_vector * b = gsl_vector_alloc(p);
     gsl_vector * b_k = gsl_vector_alloc(p);
     gsl_vector * b_work = gsl_vector_alloc(p);
@@ -234,15 +232,16 @@ int main()
     gsl_matrix_scale(Xk, (double) S00_1 );
     GSLmat_2_NRmat(mnist_double_matrix, 0, m-1, 0, n-1, Xk);
 
-    memset(mnist_filename, 0, 49);
-    snprintf(mnist_filename, 49, "../MNist_csv_CRR/MNIST%d_CRR.csv", file_it);
+    memset(mnist_filename, 0, 99);
+    snprintf(mnist_filename, 99, "../MNist_csv_CRR/MNIST%d_CRR.csv", file_it);
 
     write_csv_matrix(mnist_filename, mnist_double_matrix, m, n);
 
+    gsl_matrix_free(A);
     gsl_vector_free(b);
     gsl_vector_free(b_k);
     gsl_vector_free(b_work);
-    gsl_matrix_free(A);
+
   }
 
 
