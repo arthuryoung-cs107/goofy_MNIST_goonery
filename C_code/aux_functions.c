@@ -11,7 +11,6 @@
 void read_csv_matrix(char filename[], double ** mat_out , int m, int n )
 {
   int row_count, col_count, i, j;
-  // double ** mat_out = dmatrix(0, m-1, 0, n-1);
   char extract[1000];
   char *rest;
   char *rest2;
@@ -19,12 +18,14 @@ void read_csv_matrix(char filename[], double ** mat_out , int m, int n )
   zerom_init(mat_out, 0, m-1, 0, n-1);
 
   FILE * file_stream = fopen(filename, "r");
+
   row_count = 0;
   while (fgets(extract, sizeof (extract), file_stream))
   {
     col_count = 0;
     if (row_count != 0)
     {
+
       check = strtod(extract, &rest);
       while (col_count < n)
       {
