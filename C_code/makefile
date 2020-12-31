@@ -2,8 +2,10 @@ CC=gcc-9
 OS=OSX
 CFLAGS= -lm -Ofast -fomit-frame-pointer -ffast-math -fstrict-aliasing -finline-functions -I. -DGSL
 
-LDIR= -I/usr/local/include/
-LINK= -L/usr/local/lib/ -lgsl -lgslcblas
+# LDIR= -I/usr/local/include/
+# LINK= -L/usr/local/lib/ -lgsl -lgslcblas
+LDIR= -I./GSL_library/include/
+LINK= -L./GSL_library/lib/ -lgsl -lgslcblas
 
 DEPS3 = nrutil.h aux_functions.h GSL_tomfoolery.h line_search.h
 
