@@ -31,7 +31,7 @@ int main()
   int m = 28;
   int n = 28;
   int max_it = 500;
-  int mnist_max = 1;
+  int mnist_max = 10000;
 
   double A_std, mu_high, mu, nu, cond, tau, tau_max, p_d, A_S1;
   double m_d = m;
@@ -74,7 +74,7 @@ int main()
 
   gsl_rng * T1 = gsl_rng_alloc(gsl_rng_taus);
 
-  for ( int file_it = 0; file_it < mnist_max; file_it++)
+  for ( int file_it = 7000; file_it < mnist_max; file_it++)
   {
     memset(mnist_filename, 0, 99);
     snprintf(mnist_filename, 99, "../MNist_csv_raw/MNIST%d.csv", file_it);
